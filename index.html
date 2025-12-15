@@ -8,6 +8,17 @@
     <link rel="stylesheet" href="css/retro.css">
 </head>
 <body>
+    <!-- Loading Screen Block -->
+    <div id="loading-screen" class="modal-overlay" style="display: none; flex-direction: column; z-index: 2000; background-color: #c0c0c0;">
+        <div class="retro-border-outset" style="background: #c0c0c0; padding: 20px; text-align: center; width: 250px;">
+            <h2 style="margin: 0 0 15px 0; font-family: 'Courier New', monospace;">LOADING...</h2>
+            <div class="retro-border-inset" style="background: #fff; height: 20px; margin-bottom: 10px; position: relative;">
+                <div id="loading-bar" style="background: #000080; height: 100%; width: 0%;"></div>
+            </div>
+            <div id="loading-text" style="font-family: 'Courier New', monospace; font-size: 14px;">0%</div>
+        </div>
+    </div>
+
     <div id="game-container">
         
         <div id="difficulty-buttons" class="controls-area">
@@ -46,4 +57,4 @@
 
     <script type="module" src="js/main.js"></script>
 </body>
-</html>     
+</html>
