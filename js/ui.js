@@ -1,78 +1,131 @@
 import { CONFIG } from './config.js';
 
 export class UI {
-    constructor(gridContainer, headerElements) {
-        this.gridContainer = gridContainer;
-        this.mineCountDisplay = headerElements.mineCount;
-        this.timerDisplay = headerElements.timer;
-        this.smileyBtn = headerElements.smiley;
-        this.cells = []; 
+    constructor() {
+        this.gridContainer = document.getElementById('grid-container');
+        this.timerElement = document.getElementById('timer-val');
+        this.minesElement = document.getElementById('mines-val');
+        this.faceElement = document.getElementById('reset-btn');
+        this.modal = document.getElementById('custom-modal');
+        
+        // Cache images
+        this.imgCache = {};
     }
 
+    // Optimized rendering using DocumentFragment
     initGrid(rows, cols) {
         this.gridContainer.innerHTML = '';
-        this.gridContainer.style.gridTemplateColumns = `repeat(${cols}, ${CONFIG.TILE_SIZE}px)`;
-        this.cells = [];
+        
+        // Set grid template
+        this.gridContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        
+        const fragment = document.createDocumentFragment();
 
         for (let r = 0; r < rows; r++) {
-            this.cells[r] = [];
             for (let c = 0; c < cols; c++) {
-                const cellDiv = document.createElement('div');
-                cellDiv.classList.add('cell');
-                cellDiv.dataset.row = r;
-                cellDiv.dataset.col = c;
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.r = r;
+                cell.dataset.c = c;
                 
+                // Accessibility
+                cell.setAttribute('role', 'gridcell');
+                cell.setAttribute('aria-label', `Row ${r + 1}, Column ${c + 1}, Hidden`);
+
+                // Initial Image (Tile)
                 const img = document.createElement('img');
-                img.src = CONFIG.ASSETS.TILES.HIDDEN;
+                img.src = CONFIG.ASSETS.IMAGES.TILES.HIDDEN;
                 img.draggable = false;
-                
-                cellDiv.appendChild(img);
-                this.gridContainer.appendChild(cellDiv);
-                this.cells[r][c] = img;
+                cell.appendChild(img);
+
+                fragment.appendChild(cell);
+            }
+        }
+        
+        this.gridContainer.appendChild(fragment);
+    }
+
+    render(game) {
+        this.updateMineCount(game.minesRemaining);
+
+        // We only update changed cells in a real React/VirtualDOM setup, 
+        // but for vanilla JS, we can iterate or rely on direct DOM updates during game logic.
+        // Here we iterate for safety, but optimized approach would be specific cell updates.
+        
+        for (let r = 0; r < game.rows; r++) {
+            for (let c = 0; c < game.cols; c++) {
+                this.updateCell(r, c, game.board[r][c], game.gameOver);
             }
         }
     }
 
-    updateBoard(board, revealAllMines = false) {
-        for (let r = 0; r < board.length; r++) {
-            for (let c = 0; c < board[0].length; c++) {
-                const cellData = board[r][c];
-                const imgElement = this.cells[r][c];
-                let src = CONFIG.ASSETS.TILES.HIDDEN;
+    updateCell(r, c, cellData, isGameOver) {
+        // Find cell by dataset - optimization: could cache these in a 2D array
+        const cell = this.gridContainer.children[r * this.gridContainer.style.gridTemplateColumns.split(' ').length + c];
+        if (!cell) return; // gridTemplateColumns logic above is approximate, better to use index: r * cols + c
 
-                if (cellData.revealed) {
-                    if (cellData.isMine) {
-                        src = CONFIG.ASSETS.TILES.MINE_EXPLODED;
-                    } else if (cellData.neighborMines > 0) {
-                        src = `${CONFIG.ASSETS.NUMBERS_PATH}${cellData.neighborMines}.png`;
-                    } else {
-                        src = CONFIG.ASSETS.TILES.REVEALED;
-                    }
-                } else if (cellData.flagged) {
-                    src = CONFIG.ASSETS.TILES.FLAG;
-                    if (revealAllMines && !cellData.isMine) {
-                        src = CONFIG.ASSETS.TILES.FLAG_WRONG;
-                    }
-                } else if (revealAllMines && cellData.isMine) {
-                    src = CONFIG.ASSETS.TILES.MINE;
-                }
+        // Correction: Getting children by index is safer
+        const targetCell = this.gridContainer.children[(r * cellData.length) + c] || this.gridContainer.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+        
+        if (!targetCell) return;
+        
+        const img = targetCell.querySelector('img');
+        let newSrc = CONFIG.ASSETS.IMAGES.TILES.HIDDEN;
+        let altText = "Hidden";
 
-                if (imgElement.src.indexOf(src) === -1) {
-                    imgElement.src = src;
+        if (cellData.revealed) {
+            targetCell.classList.add('revealed');
+            if (cellData.isMine) {
+                // If it was flagged correctly, it stays a flag (usually)
+                if (cellData.flagged) {
+                     newSrc = CONFIG.ASSETS.IMAGES.ICONS.FLAG;
+                } else if (cellData.exploded) {
+                    // ONLY the one we clicked turns red
+                    newSrc = CONFIG.ASSETS.IMAGES.ICONS.MINE_EXPLODED;
+                } else {
+                    // Others are just revealed mines
+                    newSrc = CONFIG.ASSETS.IMAGES.ICONS.MINE;
                 }
+            } else {
+                const num = cellData.neighborMines;
+                newSrc = num === 0 
+                    ? CONFIG.ASSETS.IMAGES.TILES.REVEALED 
+                    : CONFIG.ASSETS.IMAGES.NUMBERS[num];
             }
+            altText = cellData.isMine ? "Mine" : `${cellData.neighborMines} mines nearby`;
+
+        } else if (cellData.flagged) {
+            newSrc = CONFIG.ASSETS.IMAGES.ICONS.FLAG;
+             if (isGameOver && !cellData.isMine) {
+                // Wrong flag reveal
+                newSrc = CONFIG.ASSETS.IMAGES.ICONS.FLAG_WRONG; 
+            }
+            altText = "Flagged";
+        }
+
+        // Only update DOM if src changed
+        if (img.getAttribute('src') !== newSrc) {
+            img.src = newSrc;
+            targetCell.setAttribute('aria-label', altText);
         }
     }
 
-    setSmiley(state) {
-        let src = CONFIG.ASSETS.SMILEY.NORMAL;
-        if (state === 'win') src = CONFIG.ASSETS.SMILEY.WIN;
-        if (state === 'lose') src = CONFIG.ASSETS.SMILEY.LOSE;
-        this.smileyBtn.querySelector('img').src = src;
+    setFace(state) {
+        const img = this.faceElement.querySelector('img');
+        let src = CONFIG.ASSETS.IMAGES.UI.SMILEY_NORMAL;
+        if (state === 'win') src = CONFIG.ASSETS.IMAGES.UI.SMILEY_WIN;
+        else if (state === 'lose') src = CONFIG.ASSETS.IMAGES.UI.SMILEY_LOSE;
+        else if (state === 'scared') src = CONFIG.ASSETS.IMAGES.UI.SMILEY_NORMAL; // Or a scared sprite if available
+
+        if (img.src !== src) img.src = src;
     }
 
-    updateCounts(minesLeft, time) {
-        this.mineCountDisplay.textContent = minesLeft.toString().padStart(3, '0');
-        this.timerDisplay.textContent = time.toString().padStart(3, '0');
+    updateTimer(seconds) {
+        // Format to 3 digits: 001, 010, 999
+        this.timerElement.innerText = seconds.toString().padStart(3, '0');
+    }
+
+    updateMineCount(count) {
+        this.minesElement.innerText = count.toString().padStart(3, '0');
     }
 }

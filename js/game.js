@@ -2,13 +2,13 @@ export class MinesweeperGame {
     constructor(rows, cols, mines) {
         this.rows = rows;
         this.cols = cols;
-        this.totalMines = mines;
-        
+        this.mines = mines;
         this.board = [];
         this.gameOver = false;
-        this.minesPlaced = false;
-        this.flagsPlaced = 0;
-        this.cellsRevealed = 0;
+        this.won = false;
+        this.minesRemaining = mines;
+        this.firstClick = true;
+        this.onGameStateChange = null; // Callback
         
         this.initBoard();
     }
@@ -16,129 +16,193 @@ export class MinesweeperGame {
     initBoard() {
         this.board = [];
         for (let r = 0; r < this.rows; r++) {
-            this.board[r] = [];
+            const row = [];
             for (let c = 0; c < this.cols; c++) {
-                this.board[r][c] = {
+                row.push({
                     isMine: false,
                     revealed: false,
                     flagged: false,
-                    neighborMines: 0
-                };
+                    neighborMines: 0,
+                    exploded: false // Track which mine caused the loss
+                });
             }
+            this.board.push(row);
         }
     }
 
-    placeMines(initialR, initialC) {
-        let minesToPlace = this.totalMines;
-        while (minesToPlace > 0) {
+    placeMines(excludeR, excludeC) {
+        let minesPlaced = 0;
+        while (minesPlaced < this.mines) {
             const r = Math.floor(Math.random() * this.rows);
             const c = Math.floor(Math.random() * this.cols);
 
-            if (!this.board[r][c].isMine && 
-                (Math.abs(r - initialR) > 1 || Math.abs(c - initialC) > 1)) {
-                
+            // Don't place mine on existing mine or the first clicked cell (and its neighbors for a safe start)
+            if (!this.board[r][c].isMine && Math.abs(r - excludeR) > 1 && Math.abs(c - excludeC) > 1) {
                 this.board[r][c].isMine = true;
-                minesToPlace--;
+                minesPlaced++;
+            } else if (this.mines >= (this.rows * this.cols) - 9 && !this.board[r][c].isMine && (r !== excludeR || c !== excludeC)) {
+                // Fallback for extremely dense boards: just avoid the exact clicked cell
+                this.board[r][c].isMine = true;
+                minesPlaced++;
             }
         }
-        this.calculateNumbers();
-        this.minesPlaced = true;
+        this.calculateNeighbors();
     }
 
-    calculateNumbers() {
-        const dirs = [
-            [-1, -1], [-1, 0], [-1, 1],
-            [0, -1],           [0, 1],
-            [1, -1],  [1, 0],  [1, 1]
-        ];
-
+    calculateNeighbors() {
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 if (this.board[r][c].isMine) continue;
-
                 let count = 0;
-                dirs.forEach(([dr, dc]) => {
-                    const nr = r + dr, nc = c + dc;
-                    if (this.isValid(nr, nc) && this.board[nr][nc].isMine) {
-                        count++;
-                    }
+                this.getNeighbors(r, c).forEach(([nr, nc]) => {
+                    if (this.board[nr][nc].isMine) count++;
                 });
                 this.board[r][c].neighborMines = count;
             }
         }
     }
 
-    reveal(r, c) {
-        if (this.gameOver || this.board[r][c].flagged || this.board[r][c].revealed) return null;
+    getNeighbors(r, c) {
+        const neighbors = [];
+        for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+                if (i === 0 && j === 0) continue;
+                const nr = r + i;
+                const nc = c + j;
+                if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols) {
+                    neighbors.push([nr, nc]);
+                }
+            }
+        }
+        return neighbors;
+    }
 
-        if (!this.minesPlaced) {
+    reveal(r, c) {
+        if (this.gameOver || this.board[r][c].flagged || this.board[r][c].revealed) return;
+
+        if (this.firstClick) {
             this.placeMines(r, c);
+            this.firstClick = false;
         }
 
         const cell = this.board[r][c];
         cell.revealed = true;
 
         if (cell.isMine) {
-            this.gameOver = true;
-            return { type: 'LOSE' };
+            cell.exploded = true; // Mark this specific mine as the cause
+            this.endGame(false);
+            return;
         }
-
-        this.cellsRevealed++;
 
         if (cell.neighborMines === 0) {
             this.floodFill(r, c);
         }
 
-        if (this.cellsRevealed === (this.rows * this.cols) - this.totalMines) {
-            this.gameOver = true;
-            this.flagAllMines();
-            return { type: 'WIN' };
-        }
-
-        return { type: 'CONTINUE' };
+        this.checkWin();
+        if (this.onGameStateChange) this.onGameStateChange({ type: 'reveal', r, c });
     }
 
-    floodFill(r, c) {
-        const dirs = [
-            [-1, -1], [-1, 0], [-1, 1],
-            [0, -1],           [0, 1],
-            [1, -1],  [1, 0],  [1, 1]
-        ];
+    // Optimized: Iterative BFS instead of Recursion to prevent stack overflow
+    floodFill(startR, startC) {
+        const queue = [[startR, startC]];
+        const visited = new Set([`${startR},${startC}`]);
 
-        dirs.forEach(([dr, dc]) => {
-            const nr = r + dr, nc = c + dc;
-            if (this.isValid(nr, nc) && !this.board[nr][nc].revealed && !this.board[nr][nc].flagged) {
+        while (queue.length > 0) {
+            const [r, c] = queue.shift();
+            const neighbors = this.getNeighbors(r, c);
+
+            for (const [nr, nc] of neighbors) {
+                const key = `${nr},${nc}`;
                 const neighbor = this.board[nr][nc];
-                neighbor.revealed = true;
-                this.cellsRevealed++;
-                if (neighbor.neighborMines === 0) {
-                    this.floodFill(nr, nc);
+
+                if (!neighbor.revealed && !neighbor.flagged && !visited.has(key)) {
+                    neighbor.revealed = true;
+                    visited.add(key);
+
+                    if (neighbor.neighborMines === 0) {
+                        queue.push([nr, nc]);
+                    }
+                    
+                    if (this.onGameStateChange) this.onGameStateChange({ type: 'reveal', r: nr, c: nc });
                 }
             }
-        });
+        }
+    }
+
+    // New Feature: Chording (Quick Reveal)
+    chord(r, c) {
+        if (this.gameOver || !this.board[r][c].revealed) return;
+
+        const cell = this.board[r][c];
+        const neighbors = this.getNeighbors(r, c);
+        
+        // Count flags around this cell
+        const flagCount = neighbors.reduce((count, [nr, nc]) => {
+            return count + (this.board[nr][nc].flagged ? 1 : 0);
+        }, 0);
+
+        // If flags match the cell number, reveal neighbors
+        if (flagCount === cell.neighborMines) {
+            let revealedSomething = false;
+            neighbors.forEach(([nr, nc]) => {
+                if (!this.board[nr][nc].revealed && !this.board[nr][nc].flagged) {
+                    this.reveal(nr, nc);
+                    revealedSomething = true;
+                }
+            });
+            return revealedSomething;
+        }
+        return false;
     }
 
     toggleFlag(r, c) {
         if (this.gameOver || this.board[r][c].revealed) return;
-        
+
         const cell = this.board[r][c];
         cell.flagged = !cell.flagged;
-        
-        if (cell.flagged) this.flagsPlaced++;
-        else this.flagsPlaced--;
+        this.minesRemaining += cell.flagged ? -1 : 1;
+
+        if (this.onGameStateChange) this.onGameStateChange({ type: 'flag', r, c, flagged: cell.flagged });
     }
 
-    flagAllMines() {
+    checkWin() {
+        let revealedCount = 0;
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
-                if (this.board[r][c].isMine) {
-                    this.board[r][c].flagged = true;
-                }
+                if (this.board[r][c].revealed) revealedCount++;
             }
+        }
+
+        if (revealedCount === (this.rows * this.cols) - this.mines) {
+            this.endGame(true);
         }
     }
 
-    isValid(r, c) {
-        return r >= 0 && r < this.rows && c >= 0 && c < this.cols;
+    endGame(win) {
+        this.gameOver = true;
+        this.won = win;
+        
+        // Reveal all mines if lost
+        if (!win) {
+            for (let r = 0; r < this.rows; r++) {
+                for (let c = 0; c < this.cols; c++) {
+                    if (this.board[r][c].isMine) {
+                        this.board[r][c].revealed = true;
+                    }
+                }
+            }
+        } else {
+            // Flag all remaining mines if won
+            this.minesRemaining = 0;
+            for (let r = 0; r < this.rows; r++) {
+                for (let c = 0; c < this.cols; c++) {
+                    if (this.board[r][c].isMine) {
+                        this.board[r][c].flagged = true;
+                    }
+                }
+            }
+        }
+        
+        if (this.onGameStateChange) this.onGameStateChange({ type: 'gameOver', win });
     }
 }

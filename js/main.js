@@ -3,284 +3,88 @@ import { UI } from './ui.js';
 import { Controls } from './controls.js';
 import { CONFIG } from './config.js';
 
-let game;
-let ui;
-let currentControls; 
+let game, ui, controls;
 let timerInterval;
-let timeElapsed = 0;
-let currentDifficultyKey = 'BEGINNER'; 
+let startTime;
+let currentDifficulty = 'INTERMEDIATE'; // Default
 
-const sounds = {
-    click: null,
-    lose: null,
-    flag: null
-};
+// Asset Preloading
+async function loadAssets() {
+    const imagesToLoad = [
+        ...Object.values(CONFIG.ASSETS.IMAGES.TILES),
+        ...CONFIG.ASSETS.IMAGES.NUMBERS.filter(n => n),
+        ...Object.values(CONFIG.ASSETS.IMAGES.ICONS),
+        ...Object.values(CONFIG.ASSETS.IMAGES.UI)
+    ];
 
-// Store preloaded assets to prevent garbage collection
-const assetCache = [];
-
-// --- IMMEDIATE STATE CHECK ---
-// We check this immediately at the module level to prevent UI flashing.
-// Since modules are deferred, the DOM elements should be accessible.
-const loadingScreen = document.getElementById('loading-screen');
-const gameContainer = document.getElementById('game-container');
-const lastActive = localStorage.getItem('ms_last_active');
-const now = Date.now();
-const INACTIVITY_THRESHOLD = 30 * 60 * 1000; // 30 minutes in milliseconds
-const needsLoading = !lastActive || (now - parseInt(lastActive) > INACTIVITY_THRESHOLD);
-
-if (needsLoading && loadingScreen && gameContainer) {
-    // Force loading screen visible and hide game immediately
-    loadingScreen.style.display = 'flex';
-    gameContainer.style.display = 'none';
-}
-// -----------------------------
-
-async function preloadAssets(onProgress) {
-    const assets = [];
-    
-    // 1. Gather all image assets from CONFIG
-    if (CONFIG.ASSETS.TILES) {
-        Object.values(CONFIG.ASSETS.TILES).forEach(src => assets.push({src, type: 'img'}));
-    }
-    if (CONFIG.ASSETS.SMILEY) {
-        Object.values(CONFIG.ASSETS.SMILEY).forEach(src => assets.push({src, type: 'img'}));
-    }
-    
-    // 2. Generate Number paths (1.png to 8.png)
-    if (CONFIG.ASSETS.NUMBERS_PATH) {
-        for (let i = 1; i <= 8; i++) {
-            assets.push({src: `${CONFIG.ASSETS.NUMBERS_PATH}${i}.png`, type: 'img'});
-        }
-    }
-
-    // 3. Gather Sound assets
-    if (CONFIG.ASSETS.SOUNDS) {
-        Object.values(CONFIG.ASSETS.SOUNDS).forEach(src => assets.push({src, type: 'audio'}));
-    }
-
-    // 4. Preload Font (Crucial for the counter display)
-    assets.push({ src: 'assets/fonts/Seven Segment.ttf', type: 'font', family: 'Seven Segment' });
-
-    let loadedCount = 0;
-    const totalAssets = assets.length;
-
-    if (totalAssets === 0) {
-        onProgress(100);
-        return;
-    }
-
-    // Helper to load a single asset
-    const loadAsset = (asset) => {
+    const loadPromises = imagesToLoad.map(src => {
         return new Promise((resolve) => {
-            // Handle Font Loading
-            if (asset.type === 'font') {
-                const font = new FontFace(asset.family, `url(${asset.src})`);
-                font.load().then((loadedFont) => {
-                    document.fonts.add(loadedFont);
-                    loadedCount++;
-                    const percent = Math.floor((loadedCount / totalAssets) * 100);
-                    onProgress(percent);
-                    resolve();
-                }).catch((e) => {
-                    console.warn(`Failed to load font: ${asset.src}`, e);
-                    loadedCount++;
-                    onProgress(Math.floor((loadedCount / totalAssets) * 100));
-                    resolve();
-                });
-                return;
-            }
-
-            // Handle Images and Audio
-            const element = asset.type === 'img' ? new Image() : new Audio();
-            
-            // Push to cache to prevent garbage collection ensuring immediate availability
-            assetCache.push(element);
-
-            const handleLoad = () => {
-                loadedCount++;
-                const percent = Math.floor((loadedCount / totalAssets) * 100);
-                onProgress(percent);
-                resolve();
-            };
-
-            // Setup listeners
-            if (asset.type === 'img') {
-                element.onload = handleLoad;
-                element.onerror = handleLoad; 
-            } else {
-                element.oncanplaythrough = handleLoad;
-                element.onerror = handleLoad;
-            }
-
-            // Timeout fallback to prevent hanging forever
-            setTimeout(() => {
-                if (loadedCount < totalAssets) {
-                    resolve(); 
-                }
-            }, 3000); // 3 seconds timeout per asset
-
-            element.src = asset.src;
+            const img = new Image();
+            img.src = src;
+            img.onload = resolve;
+            img.onerror = resolve; // Continue even if fail
         });
-    };
-
-    // Load all assets concurrently
-    await Promise.all(assets.map(loadAsset));
-}
-
-async function init() {
-    // Update activity timestamp for this session
-    localStorage.setItem('ms_last_active', Date.now());
-
-    const loadingText = document.getElementById('loading-text');
-    const loadingBar = document.getElementById('loading-bar');
-
-    // Perform loading sequence if needed
-    if (needsLoading && loadingScreen) {
-        
-        await preloadAssets((percent) => {
-            if (loadingText) loadingText.textContent = `${percent}%`;
-            if (loadingBar) loadingBar.style.width = `${percent}%`;
-        });
-
-        // Ensure we show 100% briefly
-        if (loadingText) loadingText.textContent = `100%`;
-        if (loadingBar) loadingBar.style.width = `100%`;
-        await new Promise(r => setTimeout(r, 500));
-        
-        // Hide loading screen and Show Game
-        loadingScreen.style.display = 'none';
-        if (gameContainer) gameContainer.style.display = ''; // Revert to CSS display value
-    }
-
-    const diffContainer = document.getElementById('difficulty-buttons');
-    const resetBtn = document.getElementById('reset-btn');
-
-    const changelogBtn = document.getElementById('changelog-btn');
-    const modal = document.getElementById('changelog-modal');
-    const closeBtn = document.getElementById('close-modal-btn');
-    
-    if (changelogBtn && modal) {
-        changelogBtn.addEventListener('click', () => {
-            modal.style.display = 'flex';
-        });
-        
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                modal.style.display = 'none';
-            });
-        }
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    }
-
-    if (CONFIG.ASSETS.SOUNDS) {
-        if (CONFIG.ASSETS.SOUNDS.CLICK) sounds.click = new Audio(CONFIG.ASSETS.SOUNDS.CLICK);
-        if (CONFIG.ASSETS.SOUNDS.LOSE) sounds.lose = new Audio(CONFIG.ASSETS.SOUNDS.LOSE);
-        if (CONFIG.ASSETS.SOUNDS.FLAG) sounds.flag = new Audio(CONFIG.ASSETS.SOUNDS.FLAG);
-    }
-
-    ui = new UI(
-        document.getElementById('grid-container'),
-        {
-            mineCount: document.getElementById('mine-count'),
-            timer: document.getElementById('timer'),
-            smiley: document.getElementById('reset-btn')
-        }
-    );
-
-    if (diffContainer) {
-        diffContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('diff-btn')) {
-                startGame(e.target.dataset.difficulty);
-            }
-        });
-    }
-    
-    if (resetBtn) {
-        resetBtn.addEventListener('click', () => startGame(currentDifficultyKey));
-    }
-
-    startGame('BEGINNER');
-}
-
-function playSound(soundName) {
-    const sound = sounds[soundName];
-    if (sound) {
-        sound.currentTime = 0; 
-        sound.play().catch(e => {});
-    }
-}
-
-function startGame(difficultyKey) {
-    stopTimer();
-    timeElapsed = 0;
-    currentDifficultyKey = difficultyKey;
-
-    if (currentControls) {
-        currentControls.cleanup();
-        currentControls = null;
-    }
-
-    const settings = CONFIG.DIFFICULTIES[difficultyKey];
-    game = new MinesweeperGame(settings.rows, settings.cols, settings.mines);
-    
-    ui.initGrid(settings.rows, settings.cols);
-    ui.updateCounts(settings.mines, 0);
-    ui.setSmiley('normal');
-
-    currentControls = new Controls(game, ui, (action, r, c) => {
-        const cell = game.board[r][c];
-
-        if (action === 'reveal') {
-            if (timeElapsed === 0 && !timerInterval) startTimer();
-            
-            const result = game.reveal(r, c);
-            
-            if (result) {
-                if (result.type === 'LOSE') {
-                    handleGameResult(result);
-                } else {
-                    playSound('click');
-                    handleGameResult(result);
-                }
-            }
-
-        } else if (action === 'flag') {
-            if (!cell.revealed) {
-                playSound('flag'); 
-                game.toggleFlag(r, c);
-            }
-        }
-        
-        ui.updateBoard(game.board, game.gameOver);
-        ui.updateCounts(game.totalMines - game.flagsPlaced, timeElapsed);
     });
+    
+    // Load Font
+    const font = new FontFace('Digital7', `url("${CONFIG.ASSETS.FONTS.DIGITAL}")`);
+    loadPromises.push(font.load().then(f => document.fonts.add(f)).catch(e => console.log('Font load error', e)));
+
+    await Promise.all(loadPromises);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('game-app').style.display = 'flex';
 }
 
-function handleGameResult(result) {
-    if (!result) return;
-    
-    if (result.type === 'LOSE') {
-        stopTimer();
-        ui.setSmiley('lose');
-        playSound('lose');
-    } else if (result.type === 'WIN') {
-        stopTimer();
-        ui.setSmiley('win');
+function initGame(difficultySettings) {
+    if (controls) {
+        controls.cleanup();
     }
+    if (timerInterval) clearInterval(timerInterval);
+    
+    // Hide popup if open
+    document.getElementById('game-over-modal').style.display = 'none';
+
+    const { rows, cols, mines } = difficultySettings || CONFIG.DIFFICULTY[currentDifficulty];
+    
+    game = new MinesweeperGame(rows, cols, mines);
+    ui = new UI();
+    
+    // Re-initialize grid
+    ui.initGrid(rows, cols);
+    ui.updateMineCount(mines);
+    ui.updateTimer(0);
+    ui.setFace('normal');
+
+    controls = new Controls(game, ui);
+    controls.init();
+
+    // Game Events
+    game.onGameStateChange = (event) => {
+        if (event.type === 'reveal' && !timerInterval && !game.gameOver) {
+            startTimer();
+        }
+        if (event.type === 'gameOver') {
+            stopTimer();
+            ui.setFace(event.win ? 'win' : 'lose');
+            ui.render(game); // Final render
+            
+            // Show Pop-up after a slight delay
+            setTimeout(() => {
+                showGameOverPopup(event.win);
+            }, 500);
+        }
+    };
+    
+    ui.render(game);
 }
 
 function startTimer() {
+    startTime = Date.now();
     timerInterval = setInterval(() => {
-        timeElapsed++;
-        if (timeElapsed > 999) timeElapsed = 999;
-        ui.updateCounts(game.totalMines - game.flagsPlaced, timeElapsed);
-    }, 1000);
+        const delta = Math.floor((Date.now() - startTime) / 1000);
+        const cappedTime = Math.min(delta, 999);
+        ui.updateTimer(cappedTime);
+    }, 100);
 }
 
 function stopTimer() {
@@ -288,4 +92,69 @@ function stopTimer() {
     timerInterval = null;
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// Logic for the Game Over Popup
+function showGameOverPopup(win) {
+    const modal = document.getElementById('game-over-modal');
+    const title = document.getElementById('msg-title');
+    const text = document.getElementById('msg-text');
+    const icon = document.getElementById('msg-icon');
+    
+    if (win) {
+        title.innerText = "Game Won";
+        const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+        text.innerHTML = `Congratulations!<br>You finished in ${timeTaken} seconds.`;
+        icon.innerHTML = `<span style="color:black; font-size:24px;">i</span>`; // Simple info icon
+    } else {
+        title.innerText = "Game Lost";
+        text.innerText = "Sorry, you hit a mine!";
+        icon.innerHTML = `<span style="color:red;">X</span>`;
+    }
+    
+    modal.style.display = 'flex';
+}
+
+// Global Event Listeners
+document.addEventListener('game-reset', () => initGame());
+document.addEventListener('play-sound', (e) => {
+    let src;
+    switch(e.detail) {
+        case 'click': src = CONFIG.ASSETS.SOUNDS.CLICK; break;
+        case 'flag': src = CONFIG.ASSETS.SOUNDS.FLAG; break;
+    }
+    if(src) new Audio(src).play().catch(() => {}); 
+});
+
+// Restart from Popup
+document.getElementById('msg-restart-btn').addEventListener('click', () => {
+    initGame();
+});
+
+// Difficulty Selector
+document.getElementById('diff-select').addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (val === 'CUSTOM') {
+        document.getElementById('custom-modal').style.display = 'flex';
+    } else {
+        currentDifficulty = val;
+        initGame();
+    }
+});
+
+// Custom Modal Logic
+document.getElementById('custom-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const rows = parseInt(document.getElementById('custom-rows').value);
+    const cols = parseInt(document.getElementById('custom-cols').value);
+    const mines = parseInt(document.getElementById('custom-mines').value);
+    
+    CONFIG.DIFFICULTY.CUSTOM = { rows, cols, mines };
+    currentDifficulty = 'CUSTOM';
+    
+    document.getElementById('custom-modal').style.display = 'none';
+    initGame();
+});
+
+// Start
+loadAssets().then(() => {
+    initGame();
+});
