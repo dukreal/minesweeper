@@ -103,11 +103,12 @@ function showGameOverPopup(win) {
         title.innerText = "Game Won";
         const timeTaken = Math.floor((Date.now() - startTime) / 1000);
         text.innerHTML = `Congratulations!<br>You finished in ${timeTaken} seconds.`;
-        icon.innerHTML = `<span style="color:black; font-size:24px;">i</span>`; // Simple info icon
+        // Use CSS class for styling instead of inline styles
+        icon.innerHTML = `<span class="icon-win">i</span>`; 
     } else {
         title.innerText = "Game Lost";
         text.innerText = "Sorry, you hit a mine!";
-        icon.innerHTML = `<span style="color:red;">X</span>`;
+        icon.innerHTML = `<span class="icon-lose">X</span>`;
     }
     
     modal.style.display = 'flex';

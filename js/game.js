@@ -136,7 +136,6 @@ export class MinesweeperGame {
             return count + (this.board[nr][nc].flagged ? 1 : 0);
         }, 0);
 
-        // Strict Check: Only reveal if flags match exactly
         if (flagCount === cell.neighborMines) {
             let revealedSomething = false;
             neighbors.forEach(([nr, nc]) => {

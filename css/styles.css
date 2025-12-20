@@ -276,3 +276,60 @@ button {
 button:active {
     border: 1px solid var(--bg-shadow);
 }
+
+/* --- Message Box Styles --- */
+.msg-box {
+    min-width: 320px;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.msg-body {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 25px 20px;
+    gap: 20px;
+}
+
+#msg-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    font-family: 'Times New Roman', serif;
+    background: rgba(0,0,0,0.2);
+    border-radius: 50%;
+    border: 1px solid var(--bg-shadow);
+}
+
+.icon-win {
+    color: #55ffff; /* Cyan/Info Blue */
+}
+
+.icon-lose {
+    color: #ff5555; /* Red/Error */
+}
+
+#msg-text {
+    flex-grow: 1;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.msg-footer {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    padding: 0 15px 15px 15px;
+}
+
+.msg-footer button {
+    min-width: 90px;
+    padding: 6px 12px;
+}
