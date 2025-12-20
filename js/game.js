@@ -10,6 +10,13 @@ export class MinesweeperGame {
         this.firstClick = true;
         this.onGameStateChange = null; 
         
+        // Statistics Tracking
+        this.stats = {
+            left: { active: 0, wasted: 0 },
+            right: { active: 0, wasted: 0 },
+            chord: { active: 0, wasted: 0 }
+        };
+
         this.initBoard();
     }
 
@@ -76,7 +83,7 @@ export class MinesweeperGame {
     }
 
     reveal(r, c) {
-        if (this.gameOver || this.board[r][c].flagged || this.board[r][c].revealed) return;
+        if (this.gameOver || this.board[r][c].flagged || this.board[r][c].revealed) return false;
 
         if (this.firstClick) {
             this.placeMines(r, c);
@@ -89,7 +96,7 @@ export class MinesweeperGame {
         if (cell.isMine) {
             cell.exploded = true;
             this.endGame(false);
-            return;
+            return true;
         }
 
         if (cell.neighborMines === 0) {
@@ -98,6 +105,7 @@ export class MinesweeperGame {
 
         this.checkWin();
         if (this.onGameStateChange) this.onGameStateChange({ type: 'reveal', r, c });
+        return true;
     }
 
     floodFill(startR, startC) {
@@ -149,27 +157,26 @@ export class MinesweeperGame {
         return false;
     }
 
-    // UPDATED: Return neighbors even if flag count doesn't match
+    // Return neighbors even if flag count doesn't match for visual feedback
     getChordTargets(r, c) {
         if (this.gameOver || !this.board[r][c].revealed) return [];
 
         const neighbors = this.getNeighbors(r, c);
         
-        // Return all unrevealed, unflagged neighbors regardless of flag count.
-        // This allows the UI to show the "pressed" animation even if the chord isn't valid yet.
         return neighbors.filter(([nr, nc]) => 
             !this.board[nr][nc].revealed && !this.board[nr][nc].flagged
         );
     }
 
     toggleFlag(r, c) {
-        if (this.gameOver || this.board[r][c].revealed) return;
+        if (this.gameOver || this.board[r][c].revealed) return false;
 
         const cell = this.board[r][c];
         cell.flagged = !cell.flagged;
         this.minesRemaining += cell.flagged ? -1 : 1;
 
         if (this.onGameStateChange) this.onGameStateChange({ type: 'flag', r, c, flagged: cell.flagged });
+        return true;
     }
 
     checkWin() {

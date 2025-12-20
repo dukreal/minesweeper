@@ -110,6 +110,39 @@ function showGameOverPopup(win) {
         text.innerText = "Sorry, you hit a mine!";
         icon.innerHTML = `<span class="icon-lose">X</span>`;
     }
+
+    // Add Stats Table
+    const stats = game.stats;
+    const tableHTML = `
+        <table class="stats-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Active</th>
+                    <th>Wasted</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Left Clicks</td>
+                    <td>${stats.left.active}</td>
+                    <td>${stats.left.wasted}</td>
+                </tr>
+                <tr>
+                    <td>Right Clicks</td>
+                    <td>${stats.right.active}</td>
+                    <td>${stats.right.wasted}</td>
+                </tr>
+                <tr>
+                    <td>Chords</td>
+                    <td>${stats.chord.active}</td>
+                    <td>${stats.chord.wasted}</td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+    
+    text.innerHTML += tableHTML;
     
     modal.style.display = 'flex';
 }

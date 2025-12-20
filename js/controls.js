@@ -118,24 +118,42 @@ export class Controls {
         // Left Click (0)
         if (e.button === 0) {
             if (this.game.board[r][c].revealed) {
-                // Game logic decides if reveal actually happens
-                const chordingHappened = this.game.chord(r, c);
-                if (chordingHappened) this.playSound('click');
+                // Clicking a revealed number: Attempt Chord
+                if (this.game.chord(r, c)) {
+                    this.game.stats.chord.active++;
+                    this.playSound('click');
+                } else {
+                    this.game.stats.chord.wasted++;
+                }
             } else if (!this.game.board[r][c].flagged) {
-                this.game.reveal(r, c);
-                this.playSound('click');
+                // Clicking a hidden, unflagged cell: Reveal
+                if (this.game.reveal(r, c)) {
+                    this.game.stats.left.active++;
+                    this.playSound('click');
+                } else {
+                    this.game.stats.left.wasted++;
+                }
+            } else {
+                // Clicking a flag: Wasted Left Click
+                this.game.stats.left.wasted++;
             }
         }
         // Middle Click (1)
         else if (e.button === 1) {
-            const chordingHappened = this.game.chord(r, c);
-            if (chordingHappened) this.playSound('click');
+            if (this.game.chord(r, c)) {
+                this.game.stats.chord.active++;
+                this.playSound('click');
+            } else {
+                this.game.stats.chord.wasted++;
+            }
         }
         // Right Click (2)
         else if (e.button === 2) {
-            if (!this.game.board[r][c].revealed) {
-                this.game.toggleFlag(r, c);
+            if (this.game.toggleFlag(r, c)) {
+                this.game.stats.right.active++;
                 this.playSound('flag');
+            } else {
+                this.game.stats.right.wasted++;
             }
         }
 
@@ -173,10 +191,16 @@ export class Controls {
             this.ui.updateCell(cellData.r, cellData.c, cell, false, false);
 
             if (!this.game.board[cellData.r][cellData.c].revealed) {
-                this.game.toggleFlag(cellData.r, cellData.c);
-                this.playSound('flag');
+                if(this.game.toggleFlag(cellData.r, cellData.c)) {
+                    this.game.stats.right.active++;
+                    this.playSound('flag');
+                } else {
+                    this.game.stats.right.wasted++;
+                }
                 this.ui.render(this.game);
                 if (navigator.vibrate) navigator.vibrate(50);
+            } else {
+                this.game.stats.right.wasted++; // Wasted long press on revealed
             }
             
             this.lastTouchElement = null; 
@@ -201,11 +225,21 @@ export class Controls {
 
         if (cellData && timeDiff < this.longPressDuration) {
              if (this.game.board[cellData.r][cellData.c].revealed) {
-                 const chordingHappened = this.game.chord(cellData.r, cellData.c);
-                 if (chordingHappened) this.playSound('click');
+                 if(this.game.chord(cellData.r, cellData.c)) {
+                    this.game.stats.chord.active++;
+                    this.playSound('click');
+                 } else {
+                    this.game.stats.chord.wasted++;
+                 }
              } else if (!this.game.board[cellData.r][cellData.c].flagged) {
-                 this.game.reveal(cellData.r, cellData.c);
-                 this.playSound('click');
+                 if(this.game.reveal(cellData.r, cellData.c)) {
+                    this.game.stats.left.active++;
+                    this.playSound('click');
+                 } else {
+                    this.game.stats.left.wasted++;
+                 }
+             } else {
+                 this.game.stats.left.wasted++; // Tapped on flag
              }
              this.ui.render(this.game);
         }

@@ -322,6 +322,34 @@ button:active {
     line-height: 1.4;
 }
 
+/* --- Stats Table Styles --- */
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 10px;
+    color: white;
+    border: 1px solid var(--bg-shadow);
+}
+
+.stats-table td, .stats-table th {
+    border: 1px solid var(--bg-shadow);
+    padding: 3px 5px;
+    text-align: center;
+}
+
+.stats-table th {
+    background-color: var(--win-blue);
+    color: white;
+    font-weight: normal;
+    border-bottom: 1px solid white;
+}
+
+.stats-table td:first-child {
+    text-align: left;
+    background-color: rgba(0,0,0,0.1);
+}
+
 .msg-footer {
     display: flex;
     justify-content: center;
