@@ -8,7 +8,7 @@ export class MinesweeperGame {
         this.won = false;
         this.minesRemaining = mines;
         this.firstClick = true;
-        this.onGameStateChange = null; // Callback
+        this.onGameStateChange = null; 
         
         this.initBoard();
     }
@@ -23,7 +23,7 @@ export class MinesweeperGame {
                     revealed: false,
                     flagged: false,
                     neighborMines: 0,
-                    exploded: false // Track which mine caused the loss
+                    exploded: false
                 });
             }
             this.board.push(row);
@@ -36,12 +36,10 @@ export class MinesweeperGame {
             const r = Math.floor(Math.random() * this.rows);
             const c = Math.floor(Math.random() * this.cols);
 
-            // Don't place mine on existing mine or the first clicked cell (and its neighbors for a safe start)
             if (!this.board[r][c].isMine && Math.abs(r - excludeR) > 1 && Math.abs(c - excludeC) > 1) {
                 this.board[r][c].isMine = true;
                 minesPlaced++;
             } else if (this.mines >= (this.rows * this.cols) - 9 && !this.board[r][c].isMine && (r !== excludeR || c !== excludeC)) {
-                // Fallback for extremely dense boards: just avoid the exact clicked cell
                 this.board[r][c].isMine = true;
                 minesPlaced++;
             }
@@ -89,7 +87,7 @@ export class MinesweeperGame {
         cell.revealed = true;
 
         if (cell.isMine) {
-            cell.exploded = true; // Mark this specific mine as the cause
+            cell.exploded = true;
             this.endGame(false);
             return;
         }
@@ -102,7 +100,6 @@ export class MinesweeperGame {
         if (this.onGameStateChange) this.onGameStateChange({ type: 'reveal', r, c });
     }
 
-    // Optimized: Iterative BFS instead of Recursion to prevent stack overflow
     floodFill(startR, startC) {
         const queue = [[startR, startC]];
         const visited = new Set([`${startR},${startC}`]);
@@ -129,19 +126,17 @@ export class MinesweeperGame {
         }
     }
 
-    // New Feature: Chording (Quick Reveal)
     chord(r, c) {
-        if (this.gameOver || !this.board[r][c].revealed) return;
+        if (this.gameOver || !this.board[r][c].revealed) return false;
 
         const cell = this.board[r][c];
         const neighbors = this.getNeighbors(r, c);
         
-        // Count flags around this cell
         const flagCount = neighbors.reduce((count, [nr, nc]) => {
             return count + (this.board[nr][nc].flagged ? 1 : 0);
         }, 0);
 
-        // If flags match the cell number, reveal neighbors
+        // Strict Check: Only reveal if flags match exactly
         if (flagCount === cell.neighborMines) {
             let revealedSomething = false;
             neighbors.forEach(([nr, nc]) => {
@@ -153,6 +148,19 @@ export class MinesweeperGame {
             return revealedSomething;
         }
         return false;
+    }
+
+    // UPDATED: Return neighbors even if flag count doesn't match
+    getChordTargets(r, c) {
+        if (this.gameOver || !this.board[r][c].revealed) return [];
+
+        const neighbors = this.getNeighbors(r, c);
+        
+        // Return all unrevealed, unflagged neighbors regardless of flag count.
+        // This allows the UI to show the "pressed" animation even if the chord isn't valid yet.
+        return neighbors.filter(([nr, nc]) => 
+            !this.board[nr][nc].revealed && !this.board[nr][nc].flagged
+        );
     }
 
     toggleFlag(r, c) {
@@ -182,7 +190,6 @@ export class MinesweeperGame {
         this.gameOver = true;
         this.won = win;
         
-        // Reveal all mines if lost
         if (!win) {
             for (let r = 0; r < this.rows; r++) {
                 for (let c = 0; c < this.cols; c++) {
@@ -192,7 +199,6 @@ export class MinesweeperGame {
                 }
             }
         } else {
-            // Flag all remaining mines if won
             this.minesRemaining = 0;
             for (let r = 0; r < this.rows; r++) {
                 for (let c = 0; c < this.cols; c++) {

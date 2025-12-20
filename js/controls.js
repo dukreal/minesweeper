@@ -3,12 +3,12 @@ export class Controls {
         this.game = game;
         this.ui = ui;
         this.isMouseDown = false;
+        this.activeChordTargets = null; // Track highlighted cells
         this.touchStartTime = 0;
         this.longPressTimer = null;
         this.longPressDuration = 400; // ms
         this.lastTouchElement = null;
 
-        // Bind methods to 'this' so they can be added/removed as listeners correctly
         this.handleMouseDown = this.handleMouseDown.bind(this);
         this.handleMouseUp = this.handleMouseUp.bind(this);
         this.handleMouseLeave = this.handleMouseLeave.bind(this);
@@ -22,28 +22,24 @@ export class Controls {
         const grid = this.ui.gridContainer;
         const resetBtn = document.getElementById('reset-btn');
 
-        // Mouse Events
         grid.addEventListener('mousedown', this.handleMouseDown);
-        grid.addEventListener('mouseup', this.handleMouseUp);
+        window.addEventListener('mouseup', this.handleMouseUp);
         grid.addEventListener('mouseleave', this.handleMouseLeave);
         grid.addEventListener('contextmenu', this.handleContextMenu);
 
-        // Touch Events (Mobile)
         grid.addEventListener('touchstart', this.handleTouchStart, { passive: false });
         grid.addEventListener('touchend', this.handleTouchEnd);
         
-        // Reset Button
         resetBtn.addEventListener('click', this.handleResetClick);
     }
 
-    // New method to remove listeners prevents "stacking" games
     cleanup() {
         const grid = this.ui.gridContainer;
         const resetBtn = document.getElementById('reset-btn');
 
         if (grid) {
             grid.removeEventListener('mousedown', this.handleMouseDown);
-            grid.removeEventListener('mouseup', this.handleMouseUp);
+            window.removeEventListener('mouseup', this.handleMouseUp);
             grid.removeEventListener('mouseleave', this.handleMouseLeave);
             grid.removeEventListener('contextmenu', this.handleContextMenu);
             grid.removeEventListener('touchstart', this.handleTouchStart);
@@ -64,8 +60,7 @@ export class Controls {
     }
 
     handleMouseLeave() {
-        this.isMouseDown = false;
-        this.ui.setFace('normal');
+        // Optional: clear highlights if needed
     }
 
     handleContextMenu(e) {
@@ -83,38 +78,61 @@ export class Controls {
         if (!cellData) return;
 
         this.isMouseDown = true;
-        this.ui.setFace('scared'); // Face "ooh" while holding
+        this.ui.setFace('scared');
+
+        const cell = this.game.board[cellData.r][cellData.c];
+        
+        // VISUAL FEEDBACK
+        if (cell.revealed) {
+            // Always highlight neighbors on press (even if flags don't match yet)
+            const targets = this.game.getChordTargets(cellData.r, cellData.c);
+            this.activeChordTargets = targets;
+            this.ui.highlightNeighbors(this.game, targets, true);
+        } else if (!cell.flagged && e.button === 0) {
+             // Highlight single cell press
+             this.ui.updateCell(cellData.r, cellData.c, cell, false, true);
+        }
     }
 
     handleMouseUp(e) {
-        if (!this.isMouseDown || this.game.gameOver) return;
+        if (!this.isMouseDown) return;
         this.isMouseDown = false;
+        
+        // 1. Clear Highlights immediately on release
+        if (this.activeChordTargets) {
+            this.ui.highlightNeighbors(this.game, this.activeChordTargets, false);
+            this.activeChordTargets = null;
+        }
+
+        if (this.game.gameOver) {
+            this.ui.setFace(this.game.won ? 'win' : 'lose');
+            return;
+        }
         this.ui.setFace('normal');
 
         const cellData = this.getCellFromEvent(e);
         if (!cellData) return;
+
         const { r, c } = cellData;
 
         // Left Click (0)
         if (e.button === 0) {
-            // Check if cell is revealed for chording
             if (this.game.board[r][c].revealed) {
-                // CHORDING: Allow left-click on revealed number to chord
+                // Game logic decides if reveal actually happens
                 const chordingHappened = this.game.chord(r, c);
                 if (chordingHappened) this.playSound('click');
-            } else if (!this.game.board[r][c].flagged) { // Only reveal if NOT flagged
+            } else if (!this.game.board[r][c].flagged) {
                 this.game.reveal(r, c);
                 this.playSound('click');
             }
         }
-        // Middle Click (1) - CHORDING
+        // Middle Click (1)
         else if (e.button === 1) {
             const chordingHappened = this.game.chord(r, c);
             if (chordingHappened) this.playSound('click');
         }
-        // Right Click (2) - FLAG
+        // Right Click (2)
         else if (e.button === 2) {
-            // Only toggle flag if cell is NOT revealed
             if (!this.game.board[r][c].revealed) {
                 this.game.toggleFlag(r, c);
                 this.playSound('flag');
@@ -126,7 +144,6 @@ export class Controls {
 
     handleTouchStart(e) {
         if (this.game.gameOver) return;
-        // e.preventDefault(); // Prevents scroll, careful
         
         const cellData = this.getCellFromEvent(e);
         if (!cellData) return;
@@ -135,19 +152,34 @@ export class Controls {
         this.touchStartTime = Date.now();
         this.ui.setFace('scared');
 
-        // Long press detection
+        const cell = this.game.board[cellData.r][cellData.c];
+
+        // VISUAL FEEDBACK (Mobile)
+        if (cell.revealed) {
+            const targets = this.game.getChordTargets(cellData.r, cellData.c);
+            this.activeChordTargets = targets;
+            this.ui.highlightNeighbors(this.game, targets, true);
+        } else if (!cell.flagged) {
+            this.ui.updateCell(cellData.r, cellData.c, cell, false, true);
+        }
+
+        // Long press detection for flagging
         this.longPressTimer = setTimeout(() => {
-            // Only flag if not revealed
+            // Cancel visual highlight before flagging
+            if (this.activeChordTargets) {
+                this.ui.highlightNeighbors(this.game, this.activeChordTargets, false);
+                this.activeChordTargets = null;
+            }
+            this.ui.updateCell(cellData.r, cellData.c, cell, false, false);
+
             if (!this.game.board[cellData.r][cellData.c].revealed) {
                 this.game.toggleFlag(cellData.r, cellData.c);
                 this.playSound('flag');
                 this.ui.render(this.game);
-                
-                // Haptic feedback
                 if (navigator.vibrate) navigator.vibrate(50);
             }
             
-            this.lastTouchElement = null; // Mark as handled
+            this.lastTouchElement = null; 
             this.ui.setFace('normal');
         }, this.longPressDuration);
     }
@@ -156,15 +188,18 @@ export class Controls {
         clearTimeout(this.longPressTimer);
         this.ui.setFace('normal');
 
-        // If lastTouchElement is null, it was already handled by long press
+        // Clear Highlights
+        if (this.activeChordTargets) {
+            this.ui.highlightNeighbors(this.game, this.activeChordTargets, false);
+            this.activeChordTargets = null;
+        }
+
         if (!this.lastTouchElement) return;
 
         const timeDiff = Date.now() - this.touchStartTime;
         const cellData = this.getCellFromEvent(e);
 
         if (cellData && timeDiff < this.longPressDuration) {
-             // Short tap = Reveal
-             // (Or chord if already revealed)
              if (this.game.board[cellData.r][cellData.c].revealed) {
                  const chordingHappened = this.game.chord(cellData.r, cellData.c);
                  if (chordingHappened) this.playSound('click');
