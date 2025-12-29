@@ -17,6 +17,10 @@ export class MinesweeperGame {
             chord: { active: 0, wasted: 0 }
         };
 
+        this.puzzleStats = {
+            threeBV: 0
+        };
+
         this.initBoard();
     }
 
@@ -52,6 +56,7 @@ export class MinesweeperGame {
             }
         }
         this.calculateNeighbors();
+        this.calculate3BV();
     }
 
     calculateNeighbors() {
@@ -65,6 +70,44 @@ export class MinesweeperGame {
                 this.board[r][c].neighborMines = count;
             }
         }
+    }
+
+    calculate3BV() {
+        let threeBV = 0;
+        const visited = new Array(this.rows).fill(false).map(() => new Array(this.cols).fill(false));
+
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                if (!this.board[r][c].isMine && !visited[r][c]) {
+                    if (this.board[r][c].neighborMines === 0) {
+                        threeBV++;
+                        const queue = [[r, c]];
+                        visited[r][c] = true;
+                        while(queue.length > 0) {
+                            const [cr, cc] = queue.shift();
+                            this.getNeighbors(cr, cc).forEach(([nr, nc]) => {
+                                if (!visited[nr][nc] && !this.board[nr][nc].isMine) {
+                                    visited[nr][nc] = true;
+                                    if (this.board[nr][nc].neighborMines === 0) {
+                                        queue.push([nr, nc]);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                if (!this.board[r][c].isMine && !visited[r][c]) {
+                    threeBV++;
+                }
+            }
+        }
+        
+        this.puzzleStats.threeBV = threeBV;
     }
 
     getNeighbors(r, c) {

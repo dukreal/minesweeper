@@ -109,11 +109,11 @@ function showGameOverPopup(win) {
   const title = document.getElementById("msg-title");
   const text = document.getElementById("msg-text");
   const icon = document.getElementById("msg-icon");
+  const timeTaken = ((endTime - startTime) / 1000);
 
   if (win) {
     title.innerText = "Game Won";
-    const timeTaken = ((endTime - startTime) / 1000).toFixed(3);
-    text.innerHTML = `Congratulations!<br>You finished in ${timeTaken} seconds.`;
+    text.innerHTML = `Congratulations!<br>You finished in ${timeTaken.toFixed(3)} seconds.`;
     icon.innerHTML = `<span class="icon-win">i</span>`;
   } else {
     title.innerText = "Game Lost";
@@ -122,6 +122,11 @@ function showGameOverPopup(win) {
   }
 
   const stats = game.stats;
+  const totalClicks = stats.left.active + stats.chord.active;
+  const threeBV = game.puzzleStats.threeBV;
+  const threeBVPS = (threeBV / timeTaken).toFixed(2);
+  const efficiency = totalClicks > 0 ? ((threeBV / totalClicks) * 100).toFixed(2) : 0;
+
   const tableHTML = `
         <table class="stats-table">
             <thead>
@@ -146,6 +151,18 @@ function showGameOverPopup(win) {
                     <td>Chords</td>
                     <td>${stats.chord.active}</td>
                     <td>${stats.chord.wasted}</td>
+                </tr>
+                <tr>
+                    <td>3BV</td>
+                    <td colspan="2">${threeBV}</td>
+                </tr>
+                <tr>
+                    <td>3BV/s</td>
+                    <td colspan="2">${win ? threeBVPS : "N/A"}</td>
+                </tr>
+                <tr>
+                    <td>Efficiency</td>
+                    <td colspan="2">${win ? efficiency : "N/A"}%</td>
                 </tr>
             </tbody>
         </table>

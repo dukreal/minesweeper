@@ -33,7 +33,6 @@ export const CONFIG = {
         "assets/images/numbers/cb9.png",
       ],
       ICONS: {
-        DASH: "assets/images/numbers/cbdash.png",
         FLAG: "assets/images/icons/flag.png",
         FLAG_WRONG: "assets/images/icons/flag-wrong.png",
         MINE: "assets/images/icons/mine.png",
