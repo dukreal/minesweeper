@@ -45,7 +45,7 @@ export class MinesweeperGame {
         let minesPlaced = 0;
 
         // With a certain probability, force one mine to be adjacent to the first click to "nerf" the opening
-        if (this.mines > 0 && Math.random() < 0.4) { // 50% chance to nerf
+        if (this.mines > 0 && Math.random() < 0.1) {
             const neighbors = this.getNeighbors(excludeR, excludeC);
             if (neighbors.length > 0) {
                 const randomNeighborIndex = Math.floor(Math.random() * neighbors.length);

@@ -74,31 +74,29 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  position: relative;
 }
 
 .dev-tools {
-  position: absolute;
+  position: fixed;
   top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #0f0;
-  padding: 10px;
-  border: 1px solid #0f0;
-  border-radius: 5px;
-  font-family: "Courier New", monospace;
-  font-size: 16px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #f0f0f0;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-family: "Arial", sans-serif;
+  font-size: 14px;
   display: none; /* Hidden by default */
-  z-index: 100;
-  text-shadow: 0 0 5px #0f0;
+  z-index: 10000;
 }
 
 .dev-tools.visible {
   display: block;
 }
 
-.dev-tools p {
-  margin: 0 0 5px 0;
+.dev-tools .separator {
+  margin: 0 8px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 
