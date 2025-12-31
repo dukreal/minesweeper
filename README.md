@@ -1,41 +1,44 @@
-💣 Minesweeper
+# 💣 Minesweeper
 
-A tiny battlefield of flags, logic, and delightful explosions — sharpen your wits, not your sword.
+A logic-based puzzle game built on deduction, restraint, and precision.  
+There are no hints, no safety nets, and no second chances.
 
-🛠️ Technology
+Each click reveals information.  
+Each number is absolute.  
+One mistake ends the game.
+
+🧠💥
+
+## 🛠 Built With
 
 <div align="left">
-<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" height="40" alt="javascript logo"  />
-<img width="12" />
-<img src="https://www.google.com/search?q=https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" height="40" alt="html5 logo"  />
-<img width="12" />
-<img src="https://www.google.com/search?q=https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg" height="40" alt="css3 logo"  />
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" height="36" alt="JavaScript" />
+  <img width="14" />
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" height="36" alt="HTML5" />
+  <img width="14" />
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg" height="36" alt="CSS3" />
 </div>
 
-🎮 How to Play
+## 🎯 What This Game Is
 
-Learn the art of safe clicking and strategic deduction. Based on the Triple S Games Tutorial, here are the core rules:
+Minesweeper challenges players to interpret limited information and make flawless decisions.
 
-Objective: Uncover the entire map without clicking on any mines.
+The board begins fully hidden.  
+Numbers reveal facts about nearby mines.  
+Progress depends entirely on logic, pattern recognition, and careful play.
 
-The First Click: Left-click randomly to uncover space and get information. If you hit a mine, click the smiley face to restart.
+Guessing is punished.  
+Precision is rewarded.
 
-Deciphering Numbers: A numbered square indicates exactly how many mines are adjacent to it (above, below, left, right, or diagonally).
+## 🎮 How to Play
 
-1 to 8: The range of possible adjacent mines.
+If you are new to Minesweeper or want a clear visual explanation of the mechanics, watch this tutorial:
 
-Blank: No mines are nearby.
+👉 https://www.youtube.com/watch?v=dvvrOeITzG8
 
-Strategic Flagging: Right-click on a spot where you know a mine is located to place a flag. You cannot accidentally left-click a flagged square.
+The video explains the core mechanics, number logic, and advanced techniques such as chording.
 
-Advanced Move (Chording): If you click on a number that already has the correct number of flags surrounding it, the game will automatically open all other adjacent non-flagged squares.
+## 🚀 Play It
 
-Victory: You win when all mines are properly identified and every safe square is cleared.
-
-🚀 Live Demo
-
-Ready to test your logic? Dive in and defuse some mines:
-
-Play now — minesweeper.dcism.org
-
-“The only safe mine is a flagged one.”
+Try the live demo here:  
+https://minesweeper.dcism.org
