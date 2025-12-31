@@ -7,8 +7,6 @@ Each click reveals information.
 Each number is absolute.  
 One mistake ends the game.
 
-🧠💥
-
 ## 🛠 Built With
 
 <div align="left">
