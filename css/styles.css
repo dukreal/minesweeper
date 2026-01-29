@@ -391,18 +391,11 @@ body {
   right: 15px;
   font-size: 20px;
   color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
+  cursor: default;
   font-weight: bold;
   font-family: "Segoe UI", sans-serif;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
-  transition: color 0.2s, transform 0.2s;
   z-index: 5000;
-}
-
-.version-tag:hover {
-  color: #ffffff;
-  transform: scale(1.1);
-  text-decoration: underline;
 }
 
 

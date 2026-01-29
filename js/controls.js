@@ -116,7 +116,7 @@ export class Controls {
       this.activeChordTargets = targets;
       this.ui.highlightNeighbors(this.game, targets, true);
     } else if (!cell.flagged && e.button === 0) {
-      this.ui.updateCell(cellData.r, cellData.c, cell, false, true);
+      this.ui.updateCell(cellData.r, cellData.c, this.game, false, true);
     }
   }
 
@@ -200,7 +200,7 @@ export class Controls {
       this.activeChordTargets = targets;
       this.ui.highlightNeighbors(this.game, targets, true);
     } else if (!cell.flagged) {
-      this.ui.updateCell(cellData.r, cellData.c, cell, false, true);
+      this.ui.updateCell(cellData.r, cellData.c, this.game, false, true);
     }
 
     this.longPressTimer = setTimeout(() => {
@@ -208,7 +208,7 @@ export class Controls {
         this.ui.highlightNeighbors(this.game, this.activeChordTargets, false);
         this.activeChordTargets = null;
       }
-      this.ui.updateCell(cellData.r, cellData.c, cell, false, false);
+      this.ui.updateCell(cellData.r, cellData.c, this.game, false, false);
 
       if (!this.game.board[cellData.r][cellData.c].revealed) {
         if (this.game.toggleFlag(cellData.r, cellData.c)) {
