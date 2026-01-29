@@ -1,0 +1,67 @@
+minesweeper-game/
+│
+├── index.html                 # Main HTML file
+├── css/
+│   ├── styles.css            # Main stylesheet
+│   └── retro.css             # Retro/pixel art specific styles
+│
+├── js/
+│   ├── main.js               # Entry point, initialization
+│   ├── game.js               # Core game logic (Grid, Cell classes)
+│   ├── ui.js                 # UI rendering and updates
+│   ├── controls.js           # Input handling (mouse, touch, keyboard)
+│   └── config.js             # Game configuration (grid sizes, mine counts)
+│
+├── assets/
+│   ├── images/
+│   │   ├── tiles/
+│   │   │   ├── tile.png              # Unrevealed cell
+│   │   │   ├── tile-revealed.png     # Empty revealed cell
+│   │   │   ├── tile-pressed.png      # Cell being clicked
+│   │   │   └── tile-flagged.png      # Optional: flagged tile bg
+│   │   │
+│   │   ├── numbers/
+│   │   │   ├── 1.png
+│   │   │   ├── 2.png
+│   │   │   ├── 3.png
+│   │   │   ├── 4.png
+│   │   │   ├── 5.png
+│   │   │   ├── 6.png
+│   │   │   ├── 7.png
+│   │   │   └── 8.png
+│   │   │
+│   │   ├── icons/
+│   │   │   ├── mine.png              # Mine image
+│   │   │   ├── mine-exploded.png     # Triggered mine
+│   │   │   ├── mine-wrong.png        # Wrongly flagged mine
+│   │   │   ├── flag.png              # Flag image
+│   │   │   └── flag-wrong.png        # Wrong flag on reveal
+│   │   │
+│   │   └── ui/
+│   │       ├── smiley-normal.png     # Reset button states
+│   │       ├── smiley-pressed.png
+│   │       ├── smiley-win.png
+│   │       ├── smiley-lose.png
+│   │       ├── digit-0.png           # For timer/counter display
+│   │       ├── digit-1.png
+│   │       ├── digit-2.png
+│   │       ├── digit-3.png
+│   │       ├── digit-4.png
+│   │       ├── digit-5.png
+│   │       ├── digit-6.png
+│   │       ├── digit-7.png
+│   │       ├── digit-8.png
+│   │       └── digit-9.png
+│   │
+│   ├── sounds/                # Optional: Sound effects
+│   │   ├── click.wav
+│   │   ├── flag.wav
+│   │   ├── unflag.wav
+│   │   ├── explosion.wav
+│   │   ├── win.wav
+│   │   └── tick.wav           # Optional: Timer tick
+│   │
+│   └── fonts/                 # Optional: Retro pixel fonts
+│       └── retro-font.ttf
+│
+└── README.md                  # Documentation
